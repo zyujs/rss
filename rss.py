@@ -15,7 +15,7 @@ import json
 rss_news = {}
 
 data = {
-    'rsshub': 'https://rsshub.di.he.cn/',
+    'rsshub': 'https://rsshub.di.he.cn',
     'last_id': {},
     'group_rss': {},
     'group_mode': {},
@@ -50,6 +50,8 @@ def load_data():
         with open(path, encoding='utf8') as f:
             d = json.load(f)
             if 'rsshub' in d:
+                if d['rsshub'][-1] == '/':
+                    d['rsshub'] = d['rsshub'][:-1]
                 data['rsshub'] = d['rsshub']
             if 'last_id' in d:
                 data['last_id'] = d['last_id']
