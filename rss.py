@@ -10,13 +10,14 @@ import hoshino
 import traceback
 import os
 import json
+import time
 
 
 rss_news = {}
 
 data = {
     'rsshub': 'https://rsshub.di.he.cn',
-    'last_id': {},
+    'last_time': {},
     'group_rss': {},
     'group_mode': {},
 }
@@ -53,8 +54,8 @@ def load_data():
                 if d['rsshub'][-1] == '/':
                     d['rsshub'] = d['rsshub'][:-1]
                 data['rsshub'] = d['rsshub']
-            if 'last_id' in d:
-                data['last_id'] = d['last_id']
+            if 'last_time' in d:
+                data['last_time'] = d['last_time']
             if 'group_rss' in d:
                 data['group_rss'] = d['group_rss']
             if 'group_mode' in d:
@@ -135,6 +136,14 @@ async def generate_image(url_list):
     dest_img.save(io, 'png')
     return io.getvalue()
 
+def get_published_time(item):
+    time_t = 0
+    if 'published_parsed' in item:
+        time_t = time.mktime(item['published_parsed'])
+    if 'updated_parsed' in item:
+        time_t = time.mktime(item['updated_parsed'])
+    return time_t
+
 async def get_rss_news(rss_url):
     news_list = []
     res = await query_data(rss_url)
@@ -143,14 +152,15 @@ async def get_rss_news(rss_url):
         sv.logger.info(f'rss解析失败 {rss_url}')
         return news_list
 
-    if rss_url not in data['last_id']:
+    if rss_url not in data['last_time']:
         sv.logger.info(f'rss初始化 {rss_url}')
-        data['last_id'][rss_url] = feed['entries'][1]['id'] #新订阅推送最新一条
+        data['last_time'][rss_url] = get_published_time(feed['entries'][0])
+        return news_list
 
-    last_id = data['last_id'][rss_url]
+    last_time = data['last_time'][rss_url]
 
     for item in feed["entries"]:
-        if item["id"] == last_id:
+        if get_published_time(item) <= last_time:
             break
         summary = item['summary']
         i = summary.find('//转发自')
@@ -165,7 +175,7 @@ async def get_rss_news(rss_url):
             }
         news_list.append(news)
 
-    data['last_id'][rss_url] = feed['entries'][0]['id']
+    data['last_time'][rss_url] = get_published_time(feed['entries'][0])
     return news_list
 
 async def refresh_all_rss():
@@ -177,9 +187,9 @@ async def refresh_all_rss():
             if rss_url not in rss_news:
                 rss_news[rss_url] = []
     #删除没有引用的项目的推送进度
-    for rss_url in list(data['last_id'].keys()):
+    for rss_url in list(data['last_time'].keys()):
         if rss_url not in rss_news:
-            data['last_id'].pop(rss_url)
+            data['last_time'].pop(rss_url)
     for rss_url in rss_news.keys():
         rss_news[rss_url] = await get_rss_news(rss_url)
     save_data()
