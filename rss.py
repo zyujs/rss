@@ -82,9 +82,18 @@ def get_image_url(desc):
     imgs = re.findall('<img src="(.+?)".+?>', desc)
     return imgs
 
-def remove_html_tag(s):
+def format_content(content):
+    #移除html标签
     p = re.compile('<[^>]+>')
-    return p.sub("", s) 
+    content = p.sub("", content)
+    #清除多余换行
+    text = ''
+    for line in content.splitlines():
+        line =  line.strip()
+        if line:
+            text += line + '\n'
+    text = text.rstrip()
+    return text
 
 async def generate_image(url_list):
     num = len(url_list)
@@ -151,7 +160,8 @@ async def get_rss_news(rss_url):
     if feed['bozo'] != 0:
         sv.logger.info(f'rss解析失败 {rss_url}')
         return news_list
-
+    if len(feed['entries']) == 0:
+        return news_list
     if rss_url not in data['last_time']:
         sv.logger.info(f'rss初始化 {rss_url}')
         data['last_time'][rss_url] = get_published_time(feed['entries'][0])
@@ -169,7 +179,7 @@ async def get_rss_news(rss_url):
         news = {
             'feed_title': feed['feed']['title'], 
             'title': item['title'], 
-            'content': remove_html_tag(summary),
+            'content': format_content(summary),
             'id': item['id'],
             'image': await generate_image(get_image_url(summary)),
             }
