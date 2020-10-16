@@ -278,8 +278,10 @@ def rss_get_list(group_id):
         data['group_rss'][group_id] = default_rss
     msg = '订阅列表:'
     num = len(data['group_rss'][group_id])
-    for i in range(num):
-        msg += f"\n{i}. {data['group_rss'][group_id][i]}"
+    for i in range(num): 
+        url = data['group_rss'][group_id][i]
+        url = re.sub(r'http[s]*?://.*?/', '/', url)
+        msg += f"\n{i}. {url}"
     if num == 0:
         msg += "\n空"
     return msg
