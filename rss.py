@@ -17,6 +17,8 @@ rss_news = {}
 
 data = {
     'rsshub': 'https://rsshub.di.he.cn',
+    'proxy': '',
+    'proxy_urls': [],
     'last_time': {},
     'group_rss': {},
     'group_mode': {},
@@ -60,6 +62,10 @@ def load_data():
                 data['group_rss'] = d['group_rss']
             if 'group_mode' in d:
                 data['group_mode'] = d['group_mode']
+            if 'proxy' in d:
+                data['proxy'] = d['proxy']
+            if 'proxy_urls' in d:
+                data['proxy_urls'] = d['proxy_urls']
     except:
         traceback.print_exc()
     global default_rss
@@ -70,10 +76,10 @@ default_rss = [
     data['rsshub'] + '/bilibili/user/dynamic/353840826',    #pcr官方号
     ]
 
-async def query_data(url):
+async def query_data(url, proxy=''):
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
+            async with session.get(url, proxy=proxy) as resp:
                 return await resp.read()
     except:
         return None
@@ -82,11 +88,13 @@ def get_image_url(desc):
     imgs = re.findall('<img src="(.+?)".+?>', desc)
     return imgs
 
-def format_content(content):
+def remove_html(content):
     #移除html标签
     p = re.compile('<[^>]+>')
     content = p.sub("", content)
-    #清除多余换行
+    return content
+
+def remove_lf(content):
     text = ''
     for line in content.splitlines():
         line =  line.strip()
@@ -101,7 +109,12 @@ async def generate_image(url_list):
         num = 9
     raw_images = [None for i in range(num)]
     for i in range(num):
-        image = await query_data(url_list[i])
+        url = url_list[i]
+        proxy = ''
+        for purl in data['proxy_urls']:
+            if purl in url:
+                proxy = data['proxy']
+        image = await query_data(url_list[i], proxy)
         if image:
             raw_images[i] = image
     if num == 0:
@@ -153,9 +166,24 @@ def get_published_time(item):
         time_t = time.mktime(item['updated_parsed'])
     return time_t
 
+def get_latest_time(item_list):
+    last_time = 0
+    for item in item_list:
+        time = get_published_time(item)
+        if time > last_time:
+            last_time = time
+    return last_time
+
+
 async def get_rss_news(rss_url):
     news_list = []
-    res = await query_data(rss_url)
+    proxy = ''
+    for purl in data['proxy_urls']:
+        if purl in rss_url:
+            proxy = data['proxy']
+    res = await query_data(rss_url, proxy)
+    if not res:
+        return news_list
     feed = feedparser.parse(res)
     if feed['bozo'] != 0:
         sv.logger.info(f'rss解析失败 {rss_url}')
@@ -164,28 +192,28 @@ async def get_rss_news(rss_url):
         return news_list
     if rss_url not in data['last_time']:
         sv.logger.info(f'rss初始化 {rss_url}')
-        data['last_time'][rss_url] = get_published_time(feed['entries'][0])
+        data['last_time'][rss_url] = get_latest_time(feed['entries'])
         return news_list
 
     last_time = data['last_time'][rss_url]
 
     for item in feed["entries"]:
-        if get_published_time(item) <= last_time:
-            break
-        summary = item['summary']
-        i = summary.find('//转发自')
-        if i > 0:
-            summary = summary[:i]
-        news = {
-            'feed_title': feed['feed']['title'], 
-            'title': item['title'], 
-            'content': format_content(summary),
-            'id': item['id'],
-            'image': await generate_image(get_image_url(summary)),
-            }
-        news_list.append(news)
+        if get_published_time(item) > last_time:
+            summary = item['summary']
+            #移除转发信息
+            i = summary.find('//转发自')
+            if i > 0:
+                summary = summary[:i]
+            news = {
+                'feed_title': feed['feed']['title'],
+                'title': item['title'],
+                'content': remove_html(summary),
+                'id': item['id'],
+                'image': await generate_image(get_image_url(summary)),
+                }
+            news_list.append(news)
 
-    data['last_time'][rss_url] = get_published_time(feed['entries'][0])
+    data['last_time'][rss_url] = get_latest_time(feed['entries'])
     return news_list
 
 async def refresh_all_rss():
@@ -208,7 +236,7 @@ def format_msg(news):
     msg = f"{news['feed_title']}更新:\n{news['id']}"
     if news['title'][:len(news['title'])//2] not in news['content']:
         msg += f"\n{news['title']}"
-    msg += f"\n----------\n{news['content']}"
+    msg += f"\n----------\n{remove_lf(news['content'])}"
     if news['image']:
         base64_str = f"base64://{base64.b64encode(news['image']).decode()}"
         msg += f'[CQ:image,file={base64_str}]'
@@ -247,8 +275,11 @@ async def group_process():
 
 async def rss_add(group_id, rss_url):
     group_id = str(group_id)
-
-    res = await query_data(rss_url)
+    proxy = ''
+    for purl in data['proxy_urls']:
+        if purl in rss_url:
+            proxy = data['proxy']
+    res = await query_data(rss_url, proxy)
     feed = feedparser.parse(res)
     if feed['bozo'] != 0:
         return f'无法解析rss源:{rss_url}'
