@@ -104,23 +104,31 @@ def remove_lf(content):
     return text
 
 async def generate_image(url_list):
-    num = len(url_list)
-    if num > 9: #最多9张图
-        num = 9
-    raw_images = [None for i in range(num)]
-    for i in range(num):
-        url = url_list[i]
+    raw_images = []
+    num = 0
+    for url in url_list:
         proxy = ''
         for purl in data['proxy_urls']:
             if purl in url:
                 proxy = data['proxy']
-        image = await query_data(url_list[i], proxy)
+        image = await query_data(url, proxy)
         if image:
-            raw_images[i] = image
+            try:
+                im = Image.open(BytesIO(image))
+                im = im.convert("RGBA")
+                raw_images.append(im)
+                num += 1
+            except:
+                pass
+        if num >= 9:
+            break
+
     if num == 0:
         return None
     elif num == 1:
-        return raw_images[0]
+        io = BytesIO()
+        raw_images[0].save(io, 'png')
+        return io.getvalue()
 
     dest_img = None
     box_size = 300
@@ -139,21 +147,21 @@ async def generate_image(url_list):
     dest_img = Image.new('RGBA', (width, height), (255, 255, 255, 0))
 
     for i in range(num):
-        im = Image.open(BytesIO(raw_images[i]))
-        im = im.convert("RGBA")
-        w, h = im.size
-        if w > h:
-            x0 = (w // 2) - (h // 2)
-            x1 = x0 + h
-            im = im.crop((x0, 0, x1, h))
-        elif h > w:
-            y0 = (h // 2) - (w // 2)
-            y1 = y0 + w 
-            im = im.crop((0, y0, w, y1))
-        im = im.resize((box_size, box_size),Image.ANTIALIAS)
-        x = (i % row) * (box_size + border)
-        y = (i // row) * (box_size + border)
-        dest_img.paste(im, (x, y))
+        im = raw_images[i]
+        if im:
+            w, h = im.size
+            if w > h:
+                x0 = (w // 2) - (h // 2)
+                x1 = x0 + h
+                im = im.crop((x0, 0, x1, h))
+            elif h > w:
+                y0 = (h // 2) - (w // 2)
+                y1 = y0 + w 
+                im = im.crop((0, y0, w, y1))
+            im = im.resize((box_size, box_size),Image.ANTIALIAS)
+            x = (i % row) * (box_size + border)
+            y = (i // row) * (box_size + border)
+            dest_img.paste(im, (x, y))
     io = BytesIO()
     dest_img.save(io, 'png')
     return io.getvalue()
@@ -174,6 +182,14 @@ def get_latest_time(item_list):
             last_time = time
     return last_time
 
+def check_title_in_content(title, content):
+    title = title[:len(title)//2]
+    title = title.replace('\n', '').replace('\r', '').replace(' ', '')
+    content = content.replace('\n', '').replace('\r', '').replace(' ', '')
+    if title in content:
+        return True
+    return False
+    
 
 async def get_rss_news(rss_url):
     news_list = []
@@ -234,7 +250,7 @@ async def refresh_all_rss():
 
 def format_msg(news):
     msg = f"{news['feed_title']}更新:\n{news['id']}"
-    if news['title'][:len(news['title'])//2] not in news['content']:
+    if not check_title_in_content(news['title'], news['content']):
         msg += f"\n{news['title']}"
     msg += f"\n----------\n{remove_lf(news['content'])}"
     if news['image']:
