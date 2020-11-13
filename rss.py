@@ -11,7 +11,7 @@ import traceback
 import os
 import json
 import time
-
+from html.parser import HTMLParser
 
 rss_news = {}
 
@@ -85,7 +85,7 @@ async def query_data(url, proxy=''):
         return None
 
 def get_image_url(desc):
-    imgs = re.findall('<img src="(.+?)".+?>', desc)
+    imgs = re.findall(r'<img.*?src="(.+?)".+?>', desc)
     return imgs
 
 def remove_html(content):
@@ -107,6 +107,7 @@ async def generate_image(url_list):
     raw_images = []
     num = 0
     for url in url_list:
+        url = HTMLParser().unescape(url)
         proxy = ''
         for purl in data['proxy_urls']:
             if purl in url:
