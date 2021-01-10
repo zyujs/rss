@@ -1,8 +1,12 @@
 # rss
 
-适用于Hoshino v2的rss订阅插件
+适用于Hoshino v2的rss订阅插件, 支持推送完整消息内容及图片.
 
 项目地址 https://github.com/zyujs/rss
+
+## 推送效果
+
+![rss](https://user-images.githubusercontent.com/3376669/104117898-c8281280-535f-11eb-9f0b-7efe2bc657cf.png)
 
 ## 安装方法:
 
@@ -13,7 +17,17 @@
 
 默认订阅公主连结b站官方号动态, 请使用指令自行添加/删除关注项.
 
-可以修改插件运行后生成的 `data.json` 文件的 `rsshub` 项自定义rsshub服务器地址.
+可以修改插件运行后生成的 `data.json` 文件的 `rsshub` 项自定义rsshub服务器地址, 为保证推送时效性和稳定性, 推荐自行部署RSSHub服务, 部署方式见官方文档 https://docs.rsshub.app/install/
+
+如需使用代理, 需修改 `data.json` 中的 `proxy` 和 `proxy_urls` 部分, 以下为使用代理订阅 rsshub.app 官方演示源和下载推特图片的范例:
+
+```json
+  "proxy": "http://127.0.0.1:1081",
+  "proxy_urls": [
+    "https://rsshub.app",
+    "https://pbs.twimg.com"
+  ]
+```
 
 ## 指令列表 :
 

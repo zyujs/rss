@@ -135,7 +135,7 @@ async def generate_image(url_list):
     box_size = 300
     row = 3
     border = 5
-    width = 0
+    height = 0
     width = 0
     if num == 3 or num >= 5:    #3列
         width = 900 + border * 2
