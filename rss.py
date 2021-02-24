@@ -11,7 +11,13 @@ import traceback
 import os
 import json
 import time
-from html.parser import HTMLParser
+
+import sys
+if sys.version_info[0] >= 3:
+    import html
+else:
+    from html.parser import HTMLParser
+    html = HTMLParser()
 
 rss_news = {}
 
@@ -107,7 +113,7 @@ async def generate_image(url_list):
     raw_images = []
     num = 0
     for url in url_list:
-        url = HTMLParser().unescape(url)
+        url = html.unescape(url)
         proxy = ''
         for purl in data['proxy_urls']:
             if purl in url:
