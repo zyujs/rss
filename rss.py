@@ -22,7 +22,7 @@ else:
 rss_news = {}
 
 data = {
-    'rsshub': 'https://rsshub.di.he.cn',
+    'rsshub': 'https://rsshub.dihe.moe',
     'proxy': '',
     'proxy_urls': [],
     'last_time': {},

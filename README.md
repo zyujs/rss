@@ -53,7 +53,7 @@ rss mode 0  #设置推送消息模式为标准模式
 
 ## 鸣谢
 
-- @[地河君](https://github.com/Chendihe4975) : 本项目使用 [地河云](https://michikawachin.art/) 的 [RSSHub](https://rsshub.di.he.cn/) 服务作为默认rsshub服务器, 地河喵kkp!
+- @[地河君](https://github.com/Chendihe4975) : 本项目使用 [地河云](https://michikawachin.art/) 的 [RSSHub](https://rsshub.dihe.moe/) 服务作为默认rsshub服务器, 地河喵kkp!
 
 ## 许可
 
