@@ -11,13 +11,11 @@ import traceback
 import os
 import json
 import time
+import random
+import string
 
 import sys
-if sys.version_info[0] >= 3:
-    import html
-else:
-    from html.parser import HTMLParser
-    html = HTMLParser()
+import html
 
 rss_news = {}
 
@@ -255,13 +253,17 @@ async def refresh_all_rss():
         rss_news[rss_url] = await get_rss_news(rss_url)
     save_data()
 
+def add_salt(data):
+    salt = ''.join(random.sample(string.ascii_letters + string.digits, 6))
+    return data + bytes(salt, encoding="utf8")
+
 def format_msg(news):
     msg = f"{news['feed_title']}更新:\n{news['id']}"
     if not check_title_in_content(news['title'], news['content']):
         msg += f"\n{news['title']}"
     msg += f"\n----------\n{remove_lf(news['content'])}"
     if news['image']:
-        base64_str = f"base64://{base64.b64encode(news['image']).decode()}"
+        base64_str = f"base64://{base64.b64encode(add_salt(news['image'])).decode()}"
         msg += f'[CQ:image,file={base64_str}]'
     return msg
 
